@@ -4,7 +4,7 @@ var syncpadID;
 function skipUrl(url,notify){
 	if((url.indexOf('http://') != 0 && url.indexOf('https://') != 0 ) || url.indexOf('https://chrome.google.com/') == 0){
             if(notify)
-                alert('Google Chrome has restricted to use of plugins in this page!');
+                alert('Google Chrome has restricted the use of plugins on this page!');
             return
                 true;
 	} else
@@ -42,7 +42,7 @@ var newNote =  function(tab) {
 
 var loadNotes = function(tab) {
     console.log("loadNotes")
-     requestSyncpad( { action:"getnotes", deleted:0, contentquery:"SYNCPADWEBNOTE[" + tab.url }, function(notes) {
+    getTabNotes(tab, function(notes) {
                 console.log("got %i notes for %s",notes.length, tab.url);
                 chrome.tabs.sendRequest(tab.id, {action:"loadnotes", notes: notes});
                 chrome.browserAction.setBadgeText({text:""+notes.length,tabId:tab.id});
@@ -57,7 +57,7 @@ chrome.extension.onRequest.addListener(function(request, sender, response) {
         requestSyncpad(request, response);
     } else if (request.action == "updatecount"){
         chrome.tabs.getSelected(null,function(tab) {
-            requestSyncpad({ action:"getnotes", deleted:0, contentquery:"SYNCPADWEBNOTE[" + tab.url }, function(notes) {
+            getTabNotes(tab, function(notes) {
                     console.log("got %i notes for %s",notes.length, tab.url);
                     chrome.browserAction.setBadgeText({text:""+notes.length,tabId:tab.id});
                 });
@@ -94,8 +94,14 @@ function requestSyncpad(request,response) {
     chrome.extension.sendRequest(syncpadID,request,response);
 }
 
+function getTabNotes(tab, callback) {
+    var reg = "^SYNCPADWEBNOTE\\[(" + RegExp.escape(removeAnchor(tab.url)) + "),(\\d+px),(\\d+px),(\\d+px)?,(\\d+px)?\\]$";
+    
+    requestSyncpad({ action:"getnotes", deleted:0, regex: reg}, callback);
+}
+
 function promptSyncpadInstall() {
-    var c = confirm("Syncpad is required, but not installed or outdated.\n\nOpen extension download page?");
+    var c = confirm("Syncpad could not be found. If you are sure that it is installed, please restart Chrome.\n\nOpen Syncpad download page?");
     if (c)
         chrome.tabs.create({url:"https://chrome.google.com/webstore/detail/djiafihgcdhojlgmgfolclfgmllnhhbj"});    
 }
@@ -110,3 +116,66 @@ for (var i=0; i<syncpadIDs.length; i++)
         } else
             console.log("found syncpad %s, but version %s too low", syncpadData.syncpadID, syncpadData.version);
     });
+
+
+
+// parseUri 1.2.2
+// (c) Steven Levithan <stevenlevithan.com>
+// MIT License
+
+function parseUri (str) {
+	var	o   = parseUri.options,
+		m   = o.parser[o.strictMode ? "strict" : "loose"].exec(str),
+		uri = {},
+		i   = 14;
+
+	while (i--) uri[o.key[i]] = m[i] || "";
+
+	uri[o.q.name] = {};
+	uri[o.key[12]].replace(o.q.parser, function ($0, $1, $2) {
+		if ($1) uri[o.q.name][$1] = $2;
+	});
+
+	return uri;
+};
+
+parseUri.options = {
+	strictMode: false,
+	key: ["source","protocol","authority","userInfo","user","password","host","port","relative","path","directory","file","query","anchor"],
+	q:   {
+		name:   "queryKey",
+		parser: /(?:^|&)([^&=]*)=?([^&]*)/g
+	},
+	parser: {
+		strict: /^(?:([^:\/?#]+):)?(?:\/\/((?:(([^:@]*)(?::([^:@]*))?)?@)?([^:\/?#]*)(?::(\d*))?))?((((?:[^?#\/]*\/)*)([^?#]*))(?:\?([^#]*))?(?:#(.*))?)/,
+		loose:  /^(?:(?![^:@]+:[^:@\/]*@)([^:\/?#.]+):)?(?:\/\/)?((?:(([^:@]*)(?::([^:@]*))?)?@)?([^:\/?#]*)(?::(\d*))?)(((\/(?:[^?#](?![^?#\/]*\.[^?#\/.]+(?:[?#]|$)))*\/?)?([^?#\/]*))(?:\?([^#]*))?(?:#(.*))?)/
+	}
+};
+
+RegExp.escape = function(text) {
+    return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+}
+
+function removeAnchor(url) {
+    var uriInfo = parseUri(url);
+    return url.substr(0,url.length - (uriInfo.anchor.length>0?uriInfo.anchor.length+1:0));
+}
+
+//parseUri("https://code.google.com/chrome/extensions/extension.html#method-sendRequest")
+//Object
+//anchor: "method-sendRequest"
+//authority: "code.google.com"
+//directory: "/chrome/extensions/"
+//file: "extension.html"
+//host: "code.google.com"
+//password: ""
+//path: "/chrome/extensions/extension.html"
+//port: ""
+//protocol: "https"
+//query: ""
+//queryKey: Object
+//relative: "/chrome/extensions/extension.html#method-sendRequest"
+//source: "https://code.google.com/chrome/extensions/extension.html#method-sendRequest"
+//user: ""
+//userInfo: ""
+//__proto__: Object

@@ -1,6 +1,7 @@
 
 var captured = null;
 var highestZ = 0;
+var thisPageNotes = [];
 
 function getHighestZindex(){
    var highestIndex = 0;
@@ -46,10 +47,12 @@ function Note()
     var ts = document.createElement('div');
     ts.className = 'timestamp';
     ts.addEventListener('mousedown', function(e) { return self.onMouseDown(e) }, false);
+    ts.innerHTML = "&nbsp;";
     note.appendChild(ts);
-    this.lastModified = ts;
+    this.lastModified = ts;    
 
     document.body.appendChild(note);
+    thisPageNotes.push(note);
     return this;
 }
 
@@ -159,7 +162,7 @@ Note.prototype = {
             });
 
         var self = this;
-        setTimeout(function() { document.body.removeChild(self.note) }, duration * 1000);
+        setTimeout(function() { document.body.removeChild(self.note); thisPageNotes.splice(thisPageNotes.indexOf(self.note),1); }, duration * 1000);
         
     },
 
@@ -184,10 +187,10 @@ Note.prototype = {
 
         if ("dirty" in this) {
             delete this.dirty;
-        }
-        
+        }        
+
         var requestData = {
-            content: this.text + "\nSYNCPADWEBNOTE[" +  window.location.href + "," + this.left + "," + this.top  + "," + this.width + "," + this.height + "]",
+            content: this.text + "\nSYNCPADWEBNOTE[" +  removeAnchor(location.href) + "," + this.left + "," + this.top  + "," + this.width + "," + this.height + "]",
             action : this.rawnote?"update":"create",
             key: this.rawnote?this.rawnote.key:"",
             method: "relaytosyncpad"
@@ -195,18 +198,18 @@ Note.prototype = {
         if (!this.rawnote)
             requestData.tags = ["webnote"];
         
-        this.editField.setAttribute("disabled","disabled");
+        //this.editField.setAttribute("disabled","disabled");
         this.editField.style.color = "red";
 
         var that = this;
 
         chrome.extension.sendRequest(requestData, function(newnote) {
-                if (!that.rawnote)
+                if (!that.rawnote) {
                     that.rawnote = newnote;
-
-                that.editField.removeAttribute("disabled");
-                that.editField.style.color = "";
-                chrome.extension.sendRequest({action:"updatecount"});
+                    chrome.extension.sendRequest({action:"updatecount"});
+                }
+                //that.editField.removeAttribute("disabled");
+                that.editField.style.color = "";                
             });
 
     },
@@ -266,6 +269,15 @@ Note.prototype = {
 function loadNotes(notes)
 {
     console.log("got %i notes for page",notes.length)
+    
+    for (var i = 0; i < thisPageNotes.length; ++i) {
+        try {
+            document.body.removeChild(thisPageNotes[i]);
+        } catch (e) {
+            
+        }
+    }
+    thisPageNotes = [];
 
     for (var i = 0; i < notes.length; ++i) {
             var notedata = notes[i];
@@ -275,7 +287,7 @@ function loadNotes(notes)
                  
             var lines = notedata.content.split("\n");
 
-            var reg = new RegExp("^SYNCPADWEBNOTE\\[(" + RegExp.escape(location.href) + "),(\\d+px),(\\d+px),(\\d+px)*,(\\d+px)*\\]$","m");
+            var reg = new RegExp("^SYNCPADWEBNOTE\\[(" + RegExp.escape(removeAnchor(location.href)) + "),(\\d+px),(\\d+px),(\\d+px)?,(\\d+px)?\\]$","m");
             var left, top, width, height;
 
             var content = lines.filter(function(s,i) {
@@ -304,7 +316,6 @@ function loadNotes(notes)
             note.rawnote=notedata;            
             
             note.zIndex = highestZ;
-            
     }
 }
 
@@ -373,6 +384,41 @@ chrome.extension.onRequest.addListener(function(request,sender,response) {
     }
 });
 
+
+function parseUri (str) {
+	var	o   = parseUri.options,
+		m   = o.parser[o.strictMode ? "strict" : "loose"].exec(str),
+		uri = {},
+		i   = 14;
+
+	while (i--) uri[o.key[i]] = m[i] || "";
+
+	uri[o.q.name] = {};
+	uri[o.key[12]].replace(o.q.parser, function ($0, $1, $2) {
+		if ($1) uri[o.q.name][$1] = $2;
+	});
+
+	return uri;
+};
+
+parseUri.options = {
+	strictMode: false,
+	key: ["source","protocol","authority","userInfo","user","password","host","port","relative","path","directory","file","query","anchor"],
+	q:   {
+		name:   "queryKey",
+		parser: /(?:^|&)([^&=]*)=?([^&]*)/g
+	},
+	parser: {
+		strict: /^(?:([^:\/?#]+):)?(?:\/\/((?:(([^:@]*)(?::([^:@]*))?)?@)?([^:\/?#]*)(?::(\d*))?))?((((?:[^?#\/]*\/)*)([^?#]*))(?:\?([^#]*))?(?:#(.*))?)/,
+		loose:  /^(?:(?![^:@]+:[^:@\/]*@)([^:\/?#.]+):)?(?:\/\/)?((?:(([^:@]*)(?::([^:@]*))?)?@)?([^:\/?#]*)(?::(\d*))?)(((\/(?:[^?#](?![^?#\/]*\.[^?#\/.]+(?:[?#]|$)))*\/?)?([^?#\/]*))(?:\?([^#]*))?(?:#(.*))?)/
+	}
+};
+
 RegExp.escape = function(text) {
     return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+}
+
+function removeAnchor(url) {
+    var uriInfo = parseUri(url);
+    return url.substr(0,url.length - (uriInfo.anchor.length>0?uriInfo.anchor.length+1:0));
 }
