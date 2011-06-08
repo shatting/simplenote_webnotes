@@ -1,26 +1,25 @@
 .syncpad-webnote {
-    background-color: #fff046;
-    color: #006;
+    background-color: #fff046 !important;
+    color: #006 !important;
     ''height: 200px;
     padding: 0px !important;
     margin: 0px !important;
-    position: absolute;
+    position: absolute !important;
     ''width: 150px;
-    -webkit-box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.5);
+    -webkit-box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.5) !important;
 }
 
 .syncpad-webnote:hover .closebutton {
-    display: block;
+    display: block !important;
 } 
 
 .syncpad-webnote .closebutton {
-    display: none;
-    background-image: url(img/webnote_delete.png);
-    height: 30px;
-    position: absolute;
-    left: -15px;
-    top: -15px;
-    width: 30px;
+    display: none !important;
+    height: 30px !important;
+    position: absolute !important;
+    left: -15px !important;
+    top: -15px !important;
+    width: 30px !important;
 }
 
 .syncpad-webnote .edit {
@@ -28,9 +27,10 @@
     text-align:left !important;
     font-size: 14px !important;
     font-family: arial, sans-serif !important;
-    height:190px;
+    height:190px !important;
     overflow:auto !important;
     padding:10px !important;
+    padding-bottom: 16px !important;
     background:transparent !important;
     margin: 0px !important;
     border: 0px !important;
@@ -38,10 +38,10 @@
 
 .syncpad-webnote .timestamp {
     cursor: move !important;
-    position: absolute;
-    left: 0px;
-    right: 0px;
-    bottom: 0px;
+    position: absolute !important;
+    left: 15px !important;
+    right: 0px !important;
+    bottom: 0px !important;
     font-size: 9px !important;
     background-color: #db0 !important;
     color: white !important;
@@ -50,4 +50,16 @@
     text-align: right !important;
     margin: 0px !important;
     
+}
+
+.syncpad-webnote .syncicon {    
+    cursor: move !important;
+    position: absolute !important;
+    left:0px !important;
+    bottom:0px !important;
+    height:16px !important;
+    width:16px !important;
+    background-color: #db0 !important;
+    margin: 0px !important;
+    padding: 0px !important;
 }

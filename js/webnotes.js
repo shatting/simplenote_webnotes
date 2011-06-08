@@ -49,8 +49,15 @@ function Note()
     ts.addEventListener('mousedown', function(e) { return self.onMouseDown(e) }, false);
     ts.innerHTML = "&nbsp;";
     note.appendChild(ts);
-    this.lastModified = ts;    
-
+    this.lastModified = ts;
+    
+    var sy = document.createElement('div');
+    sy.className = 'syncicon';
+    sy.innerHTML = "&nbsp;";
+    sy.addEventListener('mousedown', function(e) { return self.onMouseDown(e) }, false);
+    note.appendChild(sy);
+    this.syncIcon = sy;
+    
     document.body.appendChild(note);
     thisPageNotes.push(note);
     return this;
@@ -197,9 +204,8 @@ Note.prototype = {
         }
         if (!this.rawnote)
             requestData.tags = ["webnote"];
-        
-        //this.editField.setAttribute("disabled","disabled");
-        this.editField.style.color = "red";
+                 
+        this.syncIcon.style.backgroundImage = "url(" + chrome.extension.getURL("img/webnote_sync_dunkel.png") +")";
 
         var that = this;
 
@@ -207,9 +213,8 @@ Note.prototype = {
                 if (!that.rawnote) {
                     that.rawnote = newnote;
                     chrome.extension.sendRequest({action:"updatecount"});
-                }
-                //that.editField.removeAttribute("disabled");
-                that.editField.style.color = "";                
+                }                
+                that.syncIcon.style.backgroundImage = "";                
             });
 
     },
@@ -321,7 +326,7 @@ function loadNotes(notes)
 
 function modifiedString(date)
 {
-    return  date.getFullYear() + '-' + (date.getMonth() + 1) + '-' + date.getDate() + ' ' + date.getHours() + ':' + date.getMinutes() + ':' + date.getSeconds();
+    return  date.getFullYear() + '-' + (date.getMonth() + 1) + '-' + date.getDate() + ' ' + date.getHours() + ':' + pad(date.getMinutes());
 }
 
 function newNote()
@@ -420,5 +425,9 @@ RegExp.escape = function(text) {
 
 function removeAnchor(url) {
     var uriInfo = parseUri(url);
-    return url.substr(0,url.length - (uriInfo.anchor.length>0?uriInfo.anchor.length+1:0));
+    return url.substr(0,url.length - (uriInfo.anchor.length>0 && uriInfo.anchor.indexOf("/") < 0?uriInfo.anchor.length+1:0));
+}
+
+function pad(n){
+    return n<10 ? '0'+n : n
 }

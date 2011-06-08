@@ -1,4 +1,4 @@
-var syncpadIDs = ["eapgnfmlgmaihbmdmeecijoijlhfhaaj","djiafihgcdhojlgmgfolclfgmllnhhbj"];
+var syncpadIDs = ["kpjkeokciebpooppmpmmiooaekoijlpp","djiafihgcdhojlgmgfolclfgmllnhhbj"];
 var syncpadID;
 var syncpadVersion;
 
@@ -15,6 +15,7 @@ function skipUrl(url,notify){
 }
 
 chrome.browserAction.setBadgeText({text:""});
+chrome.browserAction.setBadgeBackgroundColor({color:[0,0,255,128]});
 
 chrome.browserAction.onClicked.addListener(function(tab) {
         console.log("action clicked")
@@ -51,7 +52,6 @@ var loadNotes = function(tab) {
     getTabNotes(tab, function(notes) {
                 console.log("got %i notes for %s",notes.length, tab.url);
                 chrome.tabs.sendRequest(tab.id, {action:"loadnotes", notes: notes});
-                chrome.browserAction.setBadgeText({text:""+notes.length,tabId:tab.id});
             });
 }
 
@@ -63,10 +63,7 @@ chrome.extension.onRequest.addListener(function(request, sender, response) {
         requestSyncpad(request, response);
     } else if (request.action == "updatecount"){
         chrome.tabs.getSelected(null,function(tab) {
-            getTabNotes(tab, function(notes) {
-                    console.log("got %i notes for %s",notes.length, tab.url);
-                    chrome.browserAction.setBadgeText({text:""+notes.length,tabId:tab.id});
-                });
+            getTabNotes(tab);
         });
     } else if (request.action == "querysyncpad")
         response(syncpadID != undefined);
@@ -83,12 +80,22 @@ chrome.extension.onRequestExternal.addListener(function(request, sender, respons
     switch(request.action) {
         case "new":
             chrome.tabs.getSelected(null,function(tab) {
-                newNote(tab);
-                response(true);
+                if(!skipUrl(tab.url,true)){
+                    newNote(tab);
+                    response(true);
+                } else
+                    response(false);
             });
             break;
     }
 });
+
+function noteCount(tabid, n) {
+    if (n>0)
+        chrome.browserAction.setBadgeText({text:""+n,tabId:tabid});
+    else
+        chrome.browserAction.setBadgeText({text:"",tabId:tabid});
+}
 
 function requestSyncpad(request,response) {
 
@@ -106,7 +113,11 @@ function requestSyncpad(request,response) {
 function getTabNotes(tab, callback) {
     var reg = "^SYNCPADWEBNOTE\\[(" + RegExp.escape(removeAnchor(tab.url)) + "),(\\d+px),(\\d+px),(\\d+px)?,(\\d+px)?\\]$";
     
-    requestSyncpad({ action:"getnotes", deleted:0, regex: reg}, callback);
+    requestSyncpad({ action:"getnotes", deleted:0, regex: reg}, function(notes) {
+        noteCount(tab.id,notes.length);
+        if (callback)
+            callback(notes);
+    });
 }
 
 function promptSyncpadInstall() {
@@ -177,7 +188,7 @@ RegExp.escape = function(text) {
 
 function removeAnchor(url) {
     var uriInfo = parseUri(url);
-    return url.substr(0,url.length - (uriInfo.anchor.length>0?uriInfo.anchor.length+1:0));
+    return url.substr(0,url.length - (uriInfo.anchor.length>0 && uriInfo.anchor.indexOf("/") < 0?uriInfo.anchor.length+1:0));
 }
 
 function get_manifest(callback) {
