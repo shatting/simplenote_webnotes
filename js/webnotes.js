@@ -262,7 +262,7 @@ Note.prototype = {
     {
         this.dirty = true;
         this.saveSoon();
-    },
+    }
 }
 
 

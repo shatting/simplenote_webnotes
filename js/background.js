@@ -1,5 +1,8 @@
 var syncpadIDs = ["eapgnfmlgmaihbmdmeecijoijlhfhaaj","djiafihgcdhojlgmgfolclfgmllnhhbj"];
 var syncpadID;
+var syncpadVersion;
+
+var thisManifest;
 
 function skipUrl(url,notify){
 	if((url.indexOf('http://') != 0 && url.indexOf('https://') != 0 ) || url.indexOf('https://chrome.google.com/') == 0){
@@ -15,8 +18,12 @@ chrome.browserAction.setBadgeText({text:""});
 
 chrome.browserAction.onClicked.addListener(function(tab) {
         console.log("action clicked")
+        if(skipUrl(tab.url,true))
+            return;
+        
         if (!syncpadID)
             promptSyncpadInstall();
+        
 
         requestSyncpad({action:"have_credentials"}, function(have_credentials) {
             if (have_credentials)
@@ -36,8 +43,7 @@ chrome.tabs.onUpdated.addListener(function(tabId,changeInfo,tab) {
 });
 
 var newNote =  function(tab) {
-    if(!skipUrl(tab.url,true))
-        chrome.tabs.sendRequest(tab.id, {action: "new"});
+    chrome.tabs.sendRequest(tab.id, {action: "new"});
 };
 
 var loadNotes = function(tab) {
@@ -72,7 +78,7 @@ chrome.extension.onRequestExternal.addListener(function(request, sender, respons
         console.log("unauthorized external request from " + sender.id);
         return;
     } else
-        console.log("external request %s from %s",request.action, sender.id);
+        console.log("syncpad request %s from %s",request.action, sender.id);
     
     switch(request.action) {
         case "new":
@@ -85,10 +91,13 @@ chrome.extension.onRequestExternal.addListener(function(request, sender, respons
 });
 
 function requestSyncpad(request,response) {
+
+    registerPlugin();
+
     if (syncpadID == undefined) {
-        if (!localstorage.asksyncpad)
+        if (!localStorage.asksyncpad)
             promptSyncpadInstall();
-        localstorage.asksyncpad = "false";
+        localStorage.asksyncpad = "false";
         return;
     }
     chrome.extension.sendRequest(syncpadID,request,response);
@@ -106,18 +115,28 @@ function promptSyncpadInstall() {
         chrome.tabs.create({url:"https://chrome.google.com/webstore/detail/djiafihgcdhojlgmgfolclfgmllnhhbj"});    
 }
 
-// register plugin
-for (var i=0; i<syncpadIDs.length; i++)
-    chrome.extension.sendRequest(syncpadIDs[i],{action:"register_plugin", name:"webnotes", syncpad_id: syncpadIDs[i]}, function(syncpadData) {
-        
-        if (syncpadData.version >= "1.8") {
-            console.log("found syncpad %s, version %s", syncpadData.syncpad_id, syncpadData.version);
-            syncpadID = syncpadData.syncpad_id;
-        } else
-            console.log("found syncpad %s, but version %s too low", syncpadData.syncpadID, syncpadData.version);
-    });
-
-
+function registerPlugin() {
+    if (syncpadID != undefined)
+        return;
+    
+    for (var i=0; i<syncpadIDs.length; i++)
+        (function (id) {
+            chrome.extension.sendRequest(id,{action:"register_plugin", name:"webnotes", syncpad_id: id, version: thisManifest.version}, function(syncpadData) {
+            if (!syncpadData)
+                console.log("syncpad %s not found", id);
+            else if (syncpadData.version >= "1.8") {
+                console.log("found syncpad %s, version %s", syncpadData.syncpad_id, syncpadData.version);
+                if (!syncpadVersion || syncpadData.version > syncpadVersion) {
+                    syncpadID = syncpadData.syncpad_id;
+                    syncpadVersion = syncpadData.version;
+                    console.log("using this");
+                } else
+                    console.log("not using this");
+            } else
+                console.log("found syncpad %s, but version %s too low", syncpadData.syncpadID, syncpadData.version);
+            });
+        })(syncpadIDs[i]);
+}
 
 // parseUri 1.2.2
 // (c) Steven Levithan <stevenlevithan.com>
@@ -160,6 +179,21 @@ function removeAnchor(url) {
     var uriInfo = parseUri(url);
     return url.substr(0,url.length - (uriInfo.anchor.length>0?uriInfo.anchor.length+1:0));
 }
+
+function get_manifest(callback) {
+  var xhr = new XMLHttpRequest();
+  xhr.onload = function () {
+    callback(JSON.parse(xhr.responseText));
+  };
+  xhr.open('GET', '../manifest.json', true);
+  xhr.send(null);
+}
+
+// on page load, register plugin
+get_manifest(function (mf) {
+    thisManifest = mf;
+    registerPlugin();
+});
 
 //parseUri("https://code.google.com/chrome/extensions/extension.html#method-sendRequest")
 //Object
