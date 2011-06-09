@@ -201,11 +201,12 @@ function get_manifest(callback) {
 }
 
 // on page load, register plugin
-get_manifest(function (mf) {
-    thisManifest = mf;
-    registerPlugin();
-});
-
+setTimeout(function() {
+        get_manifest(function (mf) {
+            thisManifest = mf;
+            registerPlugin();
+        });
+    },500);
 //parseUri("https://code.google.com/chrome/extensions/extension.html#method-sendRequest")
 //Object
 //anchor: "method-sendRequest"
