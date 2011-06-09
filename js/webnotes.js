@@ -322,6 +322,9 @@ function loadNotes(notes)
             
             note.zIndex = highestZ;
     }
+
+    if (thisPageNotes.length > 0)
+        applyCSS();
 }
 
 function modifiedString(date)
@@ -339,6 +342,8 @@ function newNote()
     note.editField.focus();
 
     chrome.extension.sendRequest({action:"updatecount"});
+
+    applyCSS();
 }
 function applyCSS(localstorage){
 	var newline=unescape("%"+"0A");
@@ -377,7 +382,7 @@ function loadCSS(json){
 	applyCSS(localstorage);
 }
 
-applyCSS();
+//applyCSS();
 
 chrome.extension.onRequest.addListener(function(request,sender,response) {    
     if (request.action == "new") {
@@ -388,7 +393,6 @@ chrome.extension.onRequest.addListener(function(request,sender,response) {
         response();
     }
 });
-
 
 function parseUri (str) {
 	var	o   = parseUri.options,
