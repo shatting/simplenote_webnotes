@@ -203,7 +203,7 @@ Note.prototype = {
             method: "relaytosyncpad"
         }
         if (!this.rawnote)
-            requestData.tags = ["webnote"];
+            requestData.tags = ["Webnotes"];
                  
         this.syncIcon.style.backgroundImage = "url(" + chrome.extension.getURL("img/webnote_sync_dunkel.png") +")";
 
