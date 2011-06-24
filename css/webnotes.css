@@ -13,6 +13,7 @@
 
 .syncpad-webnote:hover .closebutton {
     display: block !important;
+    cursor: pointer !important;
 } 
 
 .syncpad-webnote .closebutton {
