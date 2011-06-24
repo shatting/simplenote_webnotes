@@ -7,7 +7,7 @@ var thisManifest;
 function skipUrl(url,notify){
 	if((url.indexOf('http://') != 0 && url.indexOf('https://') != 0 ) || url.indexOf('https://chrome.google.com/') == 0){
             if(notify)
-                alert('Webnotes do not work on this page.');
+                alert('Sorry, but because of Google Chrome policy, Webnotes can\'t work on this page.');
             return
                 true;
 	} else
