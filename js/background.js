@@ -1,4 +1,4 @@
-var syncpadIDs = ["kpjkeokciebpooppmpmmiooaekoijlpp","djiafihgcdhojlgmgfolclfgmllnhhbj"];
+var syncpadIDs = ["kpjkeokciebpooppmpmmiooaekoijlpp","djiafihgcdhojlgmgfolclfgmllnhhbj","hkfkgnfoeakkplembkoelgknpgpljhbn"];
 var syncpadID;
 var syncpadVersion;
 
@@ -7,9 +7,8 @@ var thisManifest;
 function skipUrl(url,notify){
 	if((url.indexOf('http://') != 0 && url.indexOf('https://') != 0 ) || url.indexOf('https://chrome.google.com/') == 0){
             if(notify)
-                alert('Sorry, but because of Google Chrome policy, Webnotes can\'t work on this page.');
-            return
-                true;
+                alert('Webnotes do not work in special browser pages or the Webstore!');            
+            return true;
 	} else
             return false;
 }
@@ -34,7 +33,6 @@ chrome.browserAction.onClicked.addListener(function(tab) {
 });
 
 chrome.tabs.onUpdated.addListener(function(tabId,changeInfo,tab) {
-        console.log("changed tab %s, status = %s",tab.url, changeInfo.status)
         if (changeInfo.status == "complete")
             if(!skipUrl(tab.url)){
                     //loadCSS();
@@ -48,7 +46,7 @@ var newNote =  function(tab) {
 };
 
 var loadNotes = function(tab) {
-    console.log("loadNotes")
+    console.log("loadNotes for " + tab.url)
     getTabNotes(tab, function(notes) {
                 console.log("got %i notes for %s",notes.length, tab.url);
                 chrome.tabs.sendRequest(tab.id, {action:"loadnotes", notes: notes});
@@ -87,6 +85,15 @@ chrome.extension.onRequestExternal.addListener(function(request, sender, respons
                     response(false);
             });
             break;
+        case "ping": {
+            if (!thisManifest)
+                get_manifest(function (mf) {
+                    thisManifest = mf;
+                    response(thisManifest);
+                });
+            else
+                response(thisManifest);
+        }
     }
 });
 
@@ -130,21 +137,29 @@ function registerPlugin() {
     if (syncpadID != undefined)
         return;
     
+    if (!thisManifest) {
+        get_manifest(function (mf) {
+            thisManifest = mf;
+            registerPlugin();
+        });
+        return;
+    }
+    
     for (var i=0; i<syncpadIDs.length; i++)
         (function (id) {
-            chrome.extension.sendRequest(id,{action:"register_plugin", name:"webnotes", syncpad_id: id, version: thisManifest.version}, function(syncpadData) {
-            if (!syncpadData)
+            chrome.extension.sendRequest(id,{action:"register_plugin", name:"webnotes", version: thisManifest.version}, function(syncpadManifest) {
+            if (!syncpadManifest)
                 console.log("syncpad %s not found", id);
-            else if (syncpadData.version >= "1.8") {
-                console.log("found syncpad %s, version %s", syncpadData.syncpad_id, syncpadData.version);
-                if (!syncpadVersion || syncpadData.version > syncpadVersion) {
-                    syncpadID = syncpadData.syncpad_id;
-                    syncpadVersion = syncpadData.version;
+            else if (syncpadManifest.version >= "1.8") {
+                console.log("found syncpad %s, version %s", id, syncpadManifest.version);
+                if (!syncpadVersion || syncpadManifest.version > syncpadVersion) {
+                    syncpadID = id;
+                    syncpadVersion = syncpadManifest.version;
                     console.log("using this");
                 } else
                     console.log("not using this");
             } else
-                console.log("found syncpad %s, but version %s too low", syncpadData.syncpadID, syncpadData.version);
+                console.log("found syncpad %s, but version %s too low", id, syncpadManifest.version);
             });
         })(syncpadIDs[i]);
 }
@@ -196,16 +211,13 @@ function get_manifest(callback) {
   xhr.onload = function () {
     callback(JSON.parse(xhr.responseText));
   };
-  xhr.open('GET', '../manifest.json', true);
+  xhr.open('GET', '../manifest.json', false);
   xhr.send(null);
 }
 
 // on page load, register plugin
-setTimeout(function() {
-        get_manifest(function (mf) {
-            thisManifest = mf;
-            registerPlugin();
-        });
+setTimeout(function() {        
+        registerPlugin();
     },500);
 //parseUri("https://code.google.com/chrome/extensions/extension.html#method-sendRequest")
 //Object
