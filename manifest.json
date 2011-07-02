@@ -1,4 +1,5 @@
 {
+    
    "version": "0.9.3",
    "background_page": "background.html",
    "browser_action": {

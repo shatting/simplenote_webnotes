@@ -1,4 +1,3 @@
-
 var captured = null;
 var highestZ = 0;
 var thisPageNotes = [];
